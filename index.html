@@ -21,8 +21,9 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        .controls { margin-bottom: 15px; }
-        input[type="number"] { padding: 8px; width: 80px; border: 1px solid #ccc; border-radius: 4px; }
+        .controls { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 8px; width: 150px; border: 1px solid #ccc; border-radius: 4px; }
+        select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: white; }
         button {
             padding: 8px 15px;
             background-color: #3498db;
@@ -42,26 +43,29 @@
             margin: 20px 0;
             min-height: 70px;
             align-items: center;
+            flex-wrap: wrap;
         }
         .kugel {
-            width: 60px;
+            min-width: 60px;
             height: 60px;
-            border-radius: 50%;
-            background-color: #3498db; /* Standard: Blau */
+            padding: 0 10px;
+            border-radius: 30px; 
+            background-color: #3498db; 
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             box-shadow: inset -5px -5px 10px rgba(0,0,0,0.2), 2px 2px 5px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
         
         /* Status-Farben für die Simulation */
-        .kugel.compare { background-color: #f1c40f; transform: translateY(-10px); } /* Gelb = Vergleichen */
-        .kugel.swap { background-color: #e74c3c; transform: scale(1.1); } /* Rot = Tauschen */
-        .kugel.sorted { background-color: #2ecc71; } /* Grün = Fertig sortiert */
+        .kugel.compare { background-color: #f1c40f; transform: translateY(-10px); } 
+        .kugel.swap { background-color: #e74c3c; transform: scale(1.1); } 
+        .kugel.sorted { background-color: #2ecc71; } 
         
         /* Styling für den Übungsbereich */
         .kugel.practice { cursor: pointer; }
@@ -73,6 +77,35 @@
         .legende { display: flex; gap: 15px; font-size: 14px; margin-bottom: 15px; }
         .legende span { display: flex; align-items: center; gap: 5px; }
         .dot { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }
+
+        /* Styling für das neue Ausklapp-Code-Feld */
+        summary {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            cursor: pointer;
+            padding: 10px;
+            background-color: #eef2f5;
+            border-radius: 6px;
+            transition: background 0.2s;
+            outline: none;
+        }
+        summary:hover { background-color: #e2e8f0; }
+        .code-box {
+            background-color: #2c3e50;
+            color: #f8fcfd;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin-top: 15px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .code-comment { color: #2ecc71; font-style: italic; display: block; margin-bottom: 4px; }
+        .code-keyword { color: #f1c40f; font-weight: bold; }
+        .code-block-space { display: block; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -81,19 +114,31 @@
 
     <div class="panel">
         <h2>1. Daten eingeben</h2>
-        <div class="controls">
-            <input type="number" id="zahlInput" placeholder="Zahl">
-            <button onclick="addZahl()">Hinzufügen</button>
+        
+        <div class="controls" style="margin-bottom: 20px;">
+            <label for="dataTypeSelect"><strong>Was möchtest du sortieren?</strong></label>
+            <select id="dataTypeSelect" onchange="changeDataType()">
+                <option value="numbers">Zahlen (1, 2, 3...)</option>
+                <option value="words">Wörter / Buchstaben (A, B, C...)</option>
+            </select>
+        </div>
+        
+        <div class="controls" style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; border-left: 4px solid #3498db;">
+            <label for="zahlInput" id="inputLabel"><strong>Zahl eingeben:</strong></label>
+            <input type="text" id="zahlInput" placeholder="Z.B. 12" oninput="validateInput(this)">
+            <button onclick="addWert()">Hinzufügen</button>
             <button onclick="clearZahlen()" style="background-color: #e74c3c;">Alle löschen</button>
         </div>
+        
         <div id="eingabeContainer" class="kugel-container"></div>
-        <div class="controls">
-            <select id="algoSelect" style="padding: 8px;">
+        
+        <div class="controls" style="border-top: 1px solid #eee; padding-top: 15px;">
+            <label for="algoSelect"><strong>Sortier-Methode:</strong></label>
+            <select id="algoSelect" onchange="updateCodeExplanation()">
                 <option value="bubble">Bubble Sort</option>
                 <option value="selection">Selection Sort</option>
-                
             </select>
-            <button onclick="startSimulation()" style="background-color: #2ecc71;">Simulation & Übung starten</button>
+            <button onclick="startSimulation()" style="background-color: #2ecc71; font-weight: bold;">Simulation & Übung starten</button>
         </div>
     </div>
 
@@ -118,11 +163,37 @@
 
     <div class="panel" id="practicePanel" style="display: none;">
         <h2>3. Selbst ausprobieren!</h2>
-        <p id="practiceInstructions"></p>
         
+        <div class="controls" style="background: #eef2f5; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <strong>Schwierigkeit:</strong>
+            <input type="checkbox" id="proModeToggle" onchange="initPractice()" style="width: 18px; height: 18px; cursor: pointer;"> 
+            <label for="proModeToggle" style="font-weight: bold; cursor: pointer; color: #2c3e50;">Profi-Modus aktivieren (Kugeln frei tauschen)</label>
+        </div>
+
+        <p id="practiceInstructions" style="font-weight: 500; color: #555;"></p>
+        
+        <div id="beginnerQuestionArea" style="margin: 15px 0; padding: 15px; background: #fffde7; border-left: 5px solid #f1c40f; border-radius: 4px;">
+            <p id="beginnerPrompt" style="font-size: 16px; font-weight: bold; margin: 0 0 10px 0;">Tippe auf die beiden Kugeln, die untersucht werden sollen!</p>
+            <div id="beginnerButtons" style="display: none; gap: 10px;">
+                <button onclick="answerBeginner('ja')" style="background-color: #e74c3c; font-size: 15px; font-weight: bold;">Ja, tauschen! 🔴</button>
+                <button onclick="answerBeginner('nein')" style="background-color: #34495e; font-size: 15px; font-weight: bold;">Nein, so lassen! 🔵</button>
+            </div>
+        </div>
+
         <div id="practiceContainer" class="kugel-container"></div>
         <div id="practiceFeedback" class="feedback"></div>
-        <button onclick="resetPractice()" style="margin-top: 15px;">Übung neustarten</button>
+        <button onclick="resetPractice()" style="margin-top: 15px; background-color: #7f8c8d;">Übung neustarten</button>
+    </div>
+
+    <div class="panel" id="codePanel" style="display: none;">
+        <h2>4. Blick hinter die Kulissen</h2>
+        <details>
+            <summary>💡 Neugierig, wie dieser Algorithmus programmiert wird und im Hintergrund funktioniert?</summary>
+            <div style="margin-top: 15px; line-height: 1.6;">
+                <p id="codeIntroText">Hier siehst du den echten Programmier-Code, der deine Kugeln sortiert. Schau mal, deine echten Werte stehen schon in der ersten Zeile!</p>
+                <div id="codeDisplay" class="code-box"></div>
+            </div>
+        </details>
     </div>
 
     <script>
@@ -135,19 +206,62 @@
         // Übungs-Variablen
         let practiceData = [];
         let practiceSelectedIdx = null;
-        let expectedSwaps = []; // Speichert alle gültigen Tausch-Operationen in Reihenfolge
+        let expectedSwaps = []; 
         let currentSwapIndex = 0;
 
-        // --- 1. DATEN EINGEBEN ---
-        function addZahl() {
+        // Einsteiger-Modus Variablen
+        let beginnerSteps = [];
+        let currentBeginnerIdx = 0;
+        let beginnerActivated = false;
+        let practiceBlocked = false; 
+
+        // --- 1. DATEN EINGEBEN & VALIDIERUNG ---
+        function changeDataType() {
+            clearZahlen();
+            const type = document.getElementById('dataTypeSelect').value;
             const input = document.getElementById('zahlInput');
-            const val = parseInt(input.value);
-            if (!isNaN(val)) {
-                originalData.push(val);
-                renderEingabe();
-                input.value = '';
-                input.focus();
+            const label = document.getElementById('inputLabel');
+            
+            if (type === 'numbers') {
+                label.innerHTML = "<strong>Zahl eingeben:</strong>";
+                input.placeholder = "Z.B. 12";
+            } else {
+                label.innerHTML = "<strong>Wort eingeben:</strong>";
+                input.placeholder = "Z.B. APFEL";
             }
+            updateCodeExplanation();
+        }
+
+        function validateInput(input) {
+            const type = document.getElementById('dataTypeSelect').value;
+            if (type === 'numbers') {
+                input.value = input.value.replace(/\D/g, '');
+            } else {
+                input.value = input.value.replace(/[^A-Za-zÄÖÜäöüß]/g, '');
+            }
+        }
+
+        function addWert() {
+            const input = document.getElementById('zahlInput');
+            const type = document.getElementById('dataTypeSelect').value;
+            let val = input.value.trim();
+            
+            if (val === '') return;
+
+            if (type === 'numbers') {
+                const num = parseInt(val);
+                if (!isNaN(num)) {
+                    originalData.push(num);
+                }
+            } else {
+                val = val.toUpperCase();
+                originalData.push(val);
+            }
+            
+            renderEingabe();
+            input.value = '';
+            input.focus();
+            updateCodeExplanation();
         }
 
         function clearZahlen() {
@@ -155,6 +269,7 @@
             renderEingabe();
             document.getElementById('simPanel').style.display = 'none';
             document.getElementById('practicePanel').style.display = 'none';
+            document.getElementById('codePanel').style.display = 'none';
         }
 
         function renderEingabe() {
@@ -168,116 +283,191 @@
             });
         }
 
+        // --- HIER WURDE NUN "LET" DURCH "BOX" ERSETZT ---
+        function updateCodeExplanation() {
+            const algo = document.getElementById('algoSelect').value;
+            const codeDisplay = document.getElementById('codeDisplay');
+            
+            let werteString = originalData.length > 0 
+                ? JSON.stringify(originalData).replace(/"/g, "'") 
+                : "[5, 2, 8, 1]"; 
+
+            if (algo === 'bubble') {
+                codeDisplay.innerHTML = 
+`<span class="code-keyword">Box</span> liste = ${werteString}; <span class="code-comment">// Deine eingegebenen Werte stecken in dieser Liste!</span>
+<span class="code-keyword">Box</span> laenge = liste.length; <span class="code-comment">// Der Computer zählt, wie viele Kugeln es sind.</span>
+
+<span class="code-block-space"></span>
+<span class="code-comment">// 1. ÄUẞERE SCHLEIFE</span>
+<span class="code-comment">// Wir starten einen großen Rundgang und laufen immer wieder von vorne durch die Liste.</span>
+<span class="code-keyword">for</span> (<span class="code-keyword">Box</span> i = 0; i &lt; laenge - 1; i++) {
+    
+    <span class="code-block-space"></span>
+    <span class="code-comment">// 2. INNERE SCHLEIFE</span>
+    <span class="code-comment">// Wir schnappen uns zwei Nachbar-Kugeln direkt nebeneinander (Kugel 'j' und Kugel 'j + 1').</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">Box</span> j = 0; j &lt; laenge - i - 1; j++) {
+        
+        <span class="code-block-space"></span>
+        <span class="code-comment">// 3. DER VERGLEICH</span>
+        <span class="code-comment">// Ist die linke Kugel größer oder im Alphabet weiter hinten als die rechte Kugel?</span>
+        <span class="code-keyword">if</span> (liste[j] &gt; liste[j + 1]) {
+            
+            <span class="code-block-space"></span>
+            <span class="code-comment">// 4. DER TAUSCH</span>
+            <span class="code-comment">// Ja? Dann vertauschen wir die Plätze über eine leere "Merkkiste"!</span>
+            <span class="code-keyword">Box</span> merkkiste = liste[j];
+            liste[j] = liste[j + 1];
+            liste[j + 1] = merkkiste;
+        }
+    }
+}`;
+            } else {
+                codeDisplay.innerHTML = 
+`<span class="code-keyword">Box</span> liste = ${werteString}; <span class="code-comment">// Deine eingegebenen Werte stecken in dieser Liste!</span>
+<span class="code-keyword">Box</span> laenge = liste.length; <span class="code-comment">// Der Computer zählt, wie viele Kugeln es sind.</span>
+
+<span class="code-block-space"></span>
+<span class="code-comment">// 1. DER STARTPUNKT</span>
+<span class="code-comment">// Wir wandern Schritt für Schritt von der ersten bis zur letzten Position.</span>
+<span class="code-keyword">for</span> (<span class="code-keyword">Box</span> i = 0; i &lt; laenge - 1; i++) {
+    
+    <span class="code-block-space"></span>
+    <span class="code-comment">// Wir merken uns den aktuellen Platz erst mal als den Platz mit der "kleinsten" Kugel.</span>
+    <span class="code-keyword">Box</span> platz_von_kleinster = i; 
+
+    <span class="code-block-space"></span>
+    <span class="code-comment">// 2. DIE SUCHE</span>
+    <span class="code-comment">// Wir schauen uns alle restlichen Kugeln rechts daneben an, um zu prüfen, ob es noch kleiner geht.</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">Box</span> j = i + 1; j &lt; laenge; j++) {
+        
+        <span class="code-comment">// Entdecken wir eine noch kleinere Kugel?</span>
+        <span class="code-keyword">if</span> (liste[j] &lt; liste[platz_von_kleinster]) {
+            platz_von_kleinster = j; <span class="code-comment">// Neuer Rekord! Wir merken uns diesen neuen Platz.</span>
+        }
+    }
+
+    <span class="code-block-space"></span>
+    <span class="code-comment">// 3. DER TAUSCH AM ENDE DES DURCHLAUFS</span>
+    <span class="code-comment">// Wir nehmen die gefundene kleinste Kugel und tauschen sie mit der Kugel ganz vorne (am Platz 'i').</span>
+    <span class="code-keyword">Box</span> merkkiste = liste[i];
+    liste[i] = liste[platz_von_kleinster];
+    liste[platz_von_kleinster] = merkkiste;
+}`;
+            }
+        }
+
         // --- 2. SIMULATION & LOGIK ---
-       function startSimulation() {
-    if (originalData.length < 2) {
-        alert("Bitte füge mindestens 2 Zahlen hinzu!");
-        return;
-    }
-    
-    // Welcher Algorithmus wurde ausgewählt?
-    const algo = document.getElementById('algoSelect').value;
-    
-    // Entsprechende Funktion aufrufen
-    if (algo === 'bubble') generateBubbleSortSteps();
-    else if (algo === 'selection') generateSelectionSortSteps();
-    
-    // UI Setup
-    document.getElementById('simPanel').style.display = 'block';
-    document.getElementById('practicePanel').style.display = 'block';
-    currentStep = 0;
-    renderSimulationStep();
-    
-    // Übung Setup
-    practiceData = [...originalData];
-    currentSwapIndex = 0;
-    renderPractice();
-    document.getElementById('practiceFeedback').innerText = "";
-    // --- NEU: Übungstext dynamisch anpassen ---
-    const inst = document.getElementById('practiceInstructions');
-    if (algo === 'bubble') {
-        inst.innerHTML = "Bist du dran! Klicke nacheinander auf <strong>zwei benachbarte Kugeln</strong>, die laut <strong>Bubble Sort</strong> als Nächstes getauscht werden müssen.";
-    } else if (algo === 'selection') {
-        inst.innerHTML = "Bist du dran! Suche das <strong>kleinste Element (Minimum)</strong> im noch unsortierten Bereich. Klicke es an und klicke dann auf die Position, an die es laut <strong>Selection Sort</strong> getauscht werden muss.";
-    } else if (algo === 'insertion') {
-        inst.innerHTML = "Bist du dran! Klicke auf eine Kugel und tausche sie schrittweise nach links, bis sie an der richtigen Position im <strong>Insertion Sort</strong> angekommen ist.";
-    } else if (algo === 'merge') {
-        inst.innerHTML = "Bist du dran! Tausche die Kugeln so, wie es beim Zusammenfügen (Merge) im <strong>Merge Sort</strong> vorgesehen ist.";
-    }
-}
+        function startSimulation() {
+            if (originalData.length < 2) {
+                alert("Bitte füge mindestens 2 Werte hinzu!");
+                return;
+            }
             
-            // Generiere alle Schritte für Bubble Sort
-            generateBubbleSortSteps();
+            simulationSteps = [];
+            expectedSwaps = [];
+            beginnerSteps = [];
             
-            // UI Setup
+            const algo = document.getElementById('algoSelect').value;
+            
+            if (algo === 'bubble') generateBubbleSortSteps();
+            else if (algo === 'selection') generateSelectionSortSteps();
+            
             document.getElementById('simPanel').style.display = 'block';
             document.getElementById('practicePanel').style.display = 'block';
+            document.getElementById('codePanel').style.display = 'block'; 
+            
             currentStep = 0;
             renderSimulationStep();
-            
-            // Übung Setup
-            practiceData = [...originalData];
-            currentSwapIndex = 0;
-            renderPractice();
-            document.getElementById('practiceFeedback').innerText = "";
-        
+            updateCodeExplanation(); 
+            initPractice();
+        }
 
+        // --- BUBBLE SORT STEUERUNG ---
         function generateBubbleSortSteps() {
             let arr = [...originalData];
-            simulationSteps = [];
-            expectedSwaps = []; // Für den Übungsbereich
-            
             let n = arr.length;
             let sortedIndices = [];
 
-            simulationSteps.push({
-                array: [...arr], compare: [], swap: [], sorted: [], msg: "Startzustand"
-            });
+            simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [], msg: "Startzustand" });
 
             for (let i = 0; i < n - 1; i++) {
-                let swappedInThisPass = false;
                 for (let j = 0; j < n - i - 1; j++) {
-                    // Schritt: Vergleichen (Gelb)
                     simulationSteps.push({
-                        array: [...arr], compare: [j, j+1], swap: [], sorted: [...sortedIndices], 
-                        msg: `Vergleiche ${arr[j]} und ${arr[j+1]}`
+                        array: [...arr], compare: [j, j+1], swap: [], sorted: [...sortedIndices], msg: `Vergleiche [${arr[j]}] und [${arr[j+1]}]`
                     });
 
-                    if (arr[j] > arr[j + 1]) {
-                        // Schritt: Tauschen (Rot)
+                    let willSwap = arr[j] > arr[j + 1];
+                    
+                    beginnerSteps.push({
+                        algo: 'bubble', array: [...arr], indices: [j, j+1], correctAnswer: willSwap ? 'ja' : 'nein', sorted: [...sortedIndices]
+                    });
+
+                    if (willSwap) {
                         simulationSteps.push({
-                            array: [...arr], compare: [], swap: [j, j+1], sorted: [...sortedIndices],
-                            msg: `${arr[j]} ist größer als ${arr[j+1]} -> Tauschen!`
+                            array: [...arr], compare: [], swap: [j, j+1], sorted: [...sortedIndices], msg: `[${arr[j]}] gehört im Alphabet/Wert weiter nach hinten als [${arr[j+1]}] -> Tauschen!`
                         });
-                        
-                        // Speichere diesen Tausch für die Übung
                         expectedSwaps.push({ val1: arr[j], val2: arr[j+1] });
 
-                        // Tatsächlicher Tausch im Array
                         let temp = arr[j];
                         arr[j] = arr[j + 1];
                         arr[j + 1] = temp;
-                        swappedInThisPass = true;
 
-                        // Schritt: Nach dem Tausch
-                        simulationSteps.push({
-                            array: [...arr], compare: [], swap: [], sorted: [...sortedIndices],
-                            msg: "Erfolgreich getauscht."
-                        });
+                        simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: "Erfolgreich getauscht." });
                     }
                 }
-                sortedIndices.push(n - 1 - i); // Letztes Element ist nun an der richtigen Stelle
-                simulationSteps.push({
-                    array: [...arr], compare: [], swap: [], sorted: [...sortedIndices],
-                    msg: `Durchlauf beendet. Die Kugel ${arr[n-1-i]} ist nun endgültig sortiert.`
-                });
+                sortedIndices.push(n - 1 - i);
+                simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: `Durchlauf beendet. [${arr[n-1-i]}] ist am richtigen Platz.` });
             }
-            // Das allererste Element ist am Ende automatisch sortiert
             sortedIndices.push(0);
-            simulationSteps.push({
-                array: [...arr], compare: [], swap: [], sorted: [...sortedIndices],
-                msg: "Sortierung abgeschlossen!"
-            });
+            simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: "Sortierung abgeschlossen!" });
+        }
+
+        // --- SELECTION SORT STEUERUNG ---
+        function generateSelectionSortSteps() {
+            let arr = [...originalData];
+            let n = arr.length;
+            let sortedIndices = [];
+
+            simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [], msg: "Startzustand Selection Sort" });
+
+            for (let i = 0; i < n - 1; i++) {
+                let minIdx = i;
+                for (let j = i + 1; j < n; j++) {
+                    simulationSteps.push({
+                        array: [...arr], compare: [minIdx, j], swap: [], sorted: [...sortedIndices], msg: `Suche kleinsten Wert: Vergleiche [${arr[minIdx]}] mit [${arr[j]}]`
+                    });
+
+                    if (arr[j] < arr[minIdx]) {
+                        minIdx = j;
+                        simulationSteps.push({ array: [...arr], compare: [minIdx], swap: [], sorted: [...sortedIndices], msg: `Neuer vorläufig kleinster Wert: [${arr[minIdx]}]` });
+                    }
+                }
+                
+                beginnerSteps.push({
+                    algo: 'selection', type: 'findMin', array: [...arr], correctIdx: minIdx, targetIdx: i, sorted: [...sortedIndices]
+                });
+
+                if (minIdx !== i) {
+                    beginnerSteps.push({
+                        algo: 'selection', type: 'findTarget', array: [...arr], correctIdx: i, minIdx: minIdx, sorted: [...sortedIndices]
+                    });
+
+                    simulationSteps.push({
+                        array: [...arr], compare: [], swap: [i, minIdx], sorted: [...sortedIndices], msg: `Tausche vorderste Position [${arr[i]}] mit dem kleinsten Wert [${arr[minIdx]}]`
+                    });
+                    expectedSwaps.push({ val1: arr[i], val2: arr[minIdx] });
+
+                    let temp = arr[i];
+                    arr[i] = arr[minIdx];
+                    arr[minIdx] = temp;
+
+                    simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: "Erfolgreich getauscht." });
+                }
+                sortedIndices.push(i);
+                simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: `Position ${i+1} ist nun fest fixiert.` });
+            }
+            sortedIndices.push(n - 1);
+            simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: "Sortierung abgeschlossen!" });
         }
 
         function renderSimulationStep() {
@@ -291,14 +481,9 @@
             stepData.array.forEach((num, index) => {
                 const kugel = document.createElement('div');
                 kugel.className = 'kugel';
-                
-                if (stepData.sorted.includes(index)) {
-                    kugel.classList.add('sorted');
-                } else if (stepData.compare.includes(index)) {
-                    kugel.classList.add('compare');
-                } else if (stepData.swap.includes(index)) {
-                    kugel.classList.add('swap');
-                }
+                if (stepData.sorted.includes(index)) kugel.classList.add('sorted');
+                else if (stepData.compare.includes(index)) kugel.classList.add('compare');
+                else if (stepData.swap.includes(index)) kugel.classList.add('swap');
                 
                 kugel.innerText = num;
                 container.appendChild(kugel);
@@ -308,143 +493,257 @@
             document.getElementById('btnNext').disabled = currentStep === simulationSteps.length - 1;
         }
 
-        function nextStep() {
-            if (currentStep < simulationSteps.length - 1) {
-                currentStep++;
-                renderSimulationStep();
-            }
-        }
+        function nextStep() { if (currentStep < simulationSteps.length - 1) { currentStep++; renderSimulationStep(); } }
+        function prevStep() { if (currentStep > 0) { currentStep--; renderSimulationStep(); } }
 
-        function prevStep() {
-            if (currentStep > 0) {
-                currentStep--;
-                renderSimulationStep();
-            }
-        }
-
-        // --- 3. ÜBUNGSBEREICH ---
-        function resetPractice() {
+        // --- 3. ÜBUNGSBEREICH-STEUERUNG ---
+        function initPractice() {
+            const isProMode = document.getElementById('proModeToggle').checked;
+            const algo = document.getElementById('algoSelect').value;
+            const inst = document.getElementById('practiceInstructions');
+            
             practiceData = [...originalData];
             currentSwapIndex = 0;
+            currentBeginnerIdx = 0;
+            beginnerActivated = false;
+            practiceBlocked = false;
             practiceSelectedIdx = null;
+            
             document.getElementById('practiceFeedback').innerText = "";
+            document.getElementById('beginnerButtons').style.display = 'none';
+
+            if (isProMode) {
+                document.getElementById('beginnerQuestionArea').style.display = 'none';
+                if (algo === 'bubble') inst.innerHTML = "<strong>Profi-Modus:</strong> Klicke nacheinander auf zwei benachbarte Kugeln, die laut Bubble Sort getauscht werden müssen.";
+                else if (algo === 'selection') inst.innerHTML = "<strong>Profi-Modus:</strong> Suche den kleinsten Wert, klicke ihn an und tausche ihn an die richtige linke Position.";
+            } else {
+                document.getElementById('beginnerQuestionArea').style.display = 'block';
+                if (algo === 'bubble') {
+                    document.getElementById('beginnerPrompt').innerText = "Tippe auf die beiden Kugeln, die als nächstes untersucht werden!";
+                } else {
+                    document.getElementById('beginnerPrompt').innerText = "🔎 Finde den kleinsten Wert: Klicke auf die Kugel, die am weitesten vorne im Alphabet steht / die kleinste Zahl ist!";
+                }
+                inst.innerHTML = "<strong>Einsteiger-Modus:</strong> Folge den Fragen im gelben Kasten, um den Algorithmus Schritt für Schritt zu verstehen.";
+            }
             renderPractice();
+        }
+
+        function resetPractice() {
+            initPractice();
         }
 
         function renderPractice() {
             const container = document.getElementById('practiceContainer');
             container.innerHTML = '';
+            const isProMode = document.getElementById('proModeToggle').checked;
+            const dataType = document.getElementById('dataTypeSelect').value;
             
-            practiceData.forEach((num, index) => {
-                const kugel = document.createElement('div');
-                kugel.className = 'kugel practice';
-                if (index === practiceSelectedIdx) kugel.classList.add('selected');
-                
-                kugel.innerText = num;
-                kugel.onclick = () => handlePracticeClick(index);
-                container.appendChild(kugel);
-            });
+            if (isProMode) {
+                practiceData.forEach((num, index) => {
+                    const kugel = document.createElement('div');
+                    kugel.className = 'kugel practice';
+                    if (index === practiceSelectedIdx) kugel.classList.add('selected');
+                    kugel.innerText = num;
+                    kugel.onclick = () => handlePracticeClick(index);
+                    container.appendChild(kugel);
+                });
 
-            // Wenn alles sortiert ist
-            if (currentSwapIndex === expectedSwaps.length && expectedSwaps.length > 0) {
-                document.getElementById('practiceFeedback').innerText = "🎉 Perfekt! Du hast den Algorithmus richtig angewendet und alles sortiert!";
-                document.getElementById('practiceFeedback').style.color = "green";
-                // Färbe alle grün
-                Array.from(container.children).forEach(k => {
-                    k.className = 'kugel sorted';
+                if (currentSwapIndex === expectedSwaps.length && expectedSwaps.length > 0) {
+                    document.getElementById('practiceFeedback').innerText = "🎉 Perfekt! Du hast den Algorithmus im Profi-Modus fehlerfrei durchgespiel!";
+                    document.getElementById('practiceFeedback').style.color = "green";
+                    Array.from(container.children).forEach(k => k.className = 'kugel sorted');
+                }
+            } else {
+                if (currentBeginnerIdx >= beginnerSteps.length) {
+                    document.getElementById('practiceFeedback').innerText = "🎉 Super Klasse! Du hast alle Logik-Fragen richtig beantwortet!";
+                    document.getElementById('practiceFeedback').style.color = "green";
+                    document.getElementById('beginnerQuestionArea').style.display = 'none';
+                    
+                    const sortedEndResult = [...originalData].sort((a, b) => {
+                        if (dataType === 'numbers') return a - b;
+                        return a.localeCompare(b);
+                    });
+                    
+                    sortedEndResult.forEach(num => {
+                        const kugel = document.createElement('div');
+                        kugel.className = 'kugel sorted';
+                        kugel.innerText = num;
+                        container.appendChild(kugel);
+                    });
+                    return;
+                }
+
+                const step = beginnerSteps[currentBeginnerIdx];
+                
+                if (step.algo === 'bubble') {
+                    if (!beginnerActivated) {
+                        document.getElementById('beginnerPrompt').innerText = "Tippe auf die beiden Kugeln, die als nächstes untersucht werden!";
+                    }
+                } else if (step.algo === 'selection') {
+                    document.getElementById('beginnerButtons').style.display = 'none'; 
+                    if (step.type === 'findMin') {
+                        document.getElementById('beginnerPrompt').innerText = "🔎 Finde das Minimum: Klicke auf die Kugel mit dem kleinsten Wert (bzw. am weitesten vorne im Alphabet) im blauen Bereich!";
+                    } else if (step.type === 'findTarget') {
+                        document.getElementById('beginnerPrompt').innerText = `🎯 Gefunden! Die Kugel [${step.array[step.minIdx]}] ist der kleinste Wert. Wohin soll sie getauscht werden? Klicke auf das erste Element des blauen Bereichs!`;
+                    }
+                }
+
+                step.array.forEach((num, index) => {
+                    const kugel = document.createElement('div');
+                    kugel.className = 'kugel practice';
+                    
+                    if (step.sorted && step.sorted.includes(index)) {
+                        kugel.classList.add('sorted'); 
+                    } 
+                    else if (step.algo === 'bubble' && beginnerActivated && step.indices.includes(index)) {
+                        kugel.classList.add('compare'); 
+                    }
+                    else if (step.algo === 'selection' && step.type === 'findTarget' && index === step.minIdx) {
+                        kugel.classList.add('compare'); 
+                    }
+                    
+                    kugel.innerText = num;
+                    kugel.onclick = () => handlePracticeClick(index);
+                    container.appendChild(kugel);
                 });
             }
         }
 
         function handlePracticeClick(index) {
-            const feedbackEl = document.getElementById('practiceFeedback');
+            if (practiceBlocked) return;
             
-            if (practiceSelectedIdx === null) {
-                // Erste Kugel ausgewählt
-                practiceSelectedIdx = index;
-                renderPractice();
-                feedbackEl.innerText = "Wähle nun die zweite Kugel, um sie zu tauschen.";
-                feedbackEl.style.color = "black";
-            } else {
-                // Zweite Kugel ausgewählt
-                if (practiceSelectedIdx === index) {
-                    practiceSelectedIdx = null; // Auswahl aufheben
+            const isProMode = document.getElementById('proModeToggle').checked;
+            const feedbackEl = document.getElementById('practiceFeedback');
+            const container = document.getElementById('practiceContainer');
+            
+            if (isProMode) {
+                if (practiceSelectedIdx === null) {
+                    practiceSelectedIdx = index;
                     renderPractice();
+                    feedbackEl.innerText = "Wähle nun die zweite Kugel, um sie zu tauschen.";
+                    feedbackEl.style.color = "black";
+                } else {
+                    if (practiceSelectedIdx === index) { practiceSelectedIdx = null; renderPractice(); return; }
+                    let val1 = practiceData[practiceSelectedIdx];
+                    let val2 = practiceData[index];
+                    let expected = expectedSwaps[currentSwapIndex];
+                    
+                    if (expected && ((val1 === expected.val1 && val2 === expected.val2) || (val1 === expected.val2 && val2 === expected.val1))) {
+                        let temp = practiceData[practiceSelectedIdx];
+                        practiceData[practiceSelectedIdx] = practiceData[index];
+                        practiceData[index] = temp;
+                        currentSwapIndex++;
+                        feedbackEl.innerText = "✅ Richtig getauscht!";
+                        feedbackEl.style.color = "green";
+                    } else {
+                        let algoSelect = document.getElementById('algoSelect');
+                        feedbackEl.innerText = `❌ Falsch! Diese Kugeln werden jetzt nicht getauscht bei ${algoSelect.options[algoSelect.selectedIndex].text}.`;
+                        feedbackEl.style.color = "red";
+                    }
+                    practiceSelectedIdx = null;
+                    renderPractice();
+                }
+            } else {
+                const step = beginnerSteps[currentBeginnerIdx];
+                
+                if (step.sorted && step.sorted.includes(index)) {
+                    feedbackEl.innerText = "🔒 Diese Kugel ist schon grün gecheckt und fertig sortiert. Schau dir die blauen Kugeln an!";
+                    feedbackEl.style.color = "orange";
                     return;
                 }
 
-                let val1 = practiceData[practiceSelectedIdx];
-                let val2 = practiceData[index];
-                
-                // Prüfen, ob dieser Tausch der nächste erwartete Tausch im Algorithmus ist
-                let expected = expectedSwaps[currentSwapIndex];
-                
-                if (expected && ((val1 === expected.val1 && val2 === expected.val2) || (val1 === expected.val2 && val2 === expected.val1))) {
-                    // Richtig!
-                    let temp = practiceData[practiceSelectedIdx];
-                    practiceData[practiceSelectedIdx] = practiceData[index];
-                    practiceData[index] = temp;
-                    currentSwapIndex++;
-                    feedbackEl.innerText = "✅ Richtig getauscht!";
-                    feedbackEl.style.color = "green";
-                } else {
-                    // Falsch!
-                    let algoSelect = document.getElementById('algoSelect');
-                    let currentAlgoName = algoSelect.options[algoSelect.selectedIndex].text;
-                    
-                    feedbackEl.innerText = `❌ Falsch! Diese beiden Kugeln werden jetzt nicht getauscht. Überlege dir genau, wie ${currentAlgoName} in diesem Schritt vorgeht.`;
-                    feedbackEl.style.color = "red";
+                if (step.algo === 'bubble') {
+                    if (beginnerActivated) {
+                        feedbackEl.innerText = "Bitte beantworte zuerst die Frage mit Ja oder Nein!";
+                        feedbackEl.style.color = "orange";
+                        return;
+                    }
+
+                    if (step.indices.includes(index)) {
+                        beginnerActivated = true;
+                        feedbackEl.innerText = "👍 Super hingeguckt! Das sind die richtigen Kugeln.";
+                        feedbackEl.style.color = "green";
+                        document.getElementById('beginnerPrompt').innerText = `Müssen die Kugeln ([${step.array[step.indices[0]]}] und [${step.array[step.indices[1]]}]) getauscht werden?`;
+                        document.getElementById('beginnerButtons').style.display = 'flex';
+                        renderPractice(); 
+                    } else {
+                        feedbackEl.innerText = "❌ Ups! Diese Kugeln schaut sich der Algorithmus gerade nicht an. Guck nochmal in der Simulation nach!";
+                        feedbackEl.style.color = "red";
+                    }
+                } 
+                else if (step.algo === 'selection') {
+                    if (step.type === 'findMin') {
+                        if (index === step.correctIdx) {
+                            feedbackEl.innerText = "✅ Spitzenklasse! Du hast den kleinsten Wert entdeckt.";
+                            feedbackEl.style.color = "green";
+                            container.children[index].classList.add('compare');
+                            
+                            practiceBlocked = true;
+                            setTimeout(() => {
+                                currentBeginnerIdx++;
+                                practiceBlocked = false;
+                                renderPractice();
+                            }, 1000);
+                        } else {
+                            feedbackEl.innerText = "❌ Das ist noch nicht das kleinste Element im ungelösten (blauen) Bereich. Such weiter!";
+                            feedbackEl.style.color = "red";
+                        }
+                    } 
+                    else if (step.type === 'findTarget') {
+                        if (index === step.correctIdx) {
+                            feedbackEl.innerText = "✅ Genial! Genau dorthin tauschen wir das Minimum.";
+                            feedbackEl.style.color = "green";
+                            container.children[step.minIdx].className = 'kugel swap';
+                            container.children[step.correctIdx].className = 'kugel swap';
+                            
+                            practiceBlocked = true;
+                            setTimeout(() => {
+                                currentBeginnerIdx++;
+                                practiceBlocked = false;
+                                renderPractice();
+                            }, 1200);
+                        } else {
+                            feedbackEl.innerText = `❌ Halt, falsch! Das Minimum gehört an den Anfang des blauen Feldes (Position ${step.correctIdx + 1}).`;
+                            feedbackEl.style.color = "red";
+                        }
+                    }
                 }
-                practiceSelectedIdx = null;
-                renderPractice();
             }
         }
-        // --- SELECTION SORT ---
-function generateSelectionSortSteps() {
-    let arr = [...originalData];
-    simulationSteps = [];
-    expectedSwaps = [];
-    let n = arr.length;
-    let sortedIndices = [];
 
-    simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [], msg: "Startzustand Selection Sort" });
-
-    for (let i = 0; i < n - 1; i++) {
-        let minIdx = i;
-        for (let j = i + 1; j < n; j++) {
-            simulationSteps.push({
-                array: [...arr], compare: [minIdx, j], swap: [], sorted: [...sortedIndices], 
-                msg: `Suche Minimum: Vergleiche ${arr[minIdx]} mit ${arr[j]}`
-            });
-            if (arr[j] < arr[minIdx]) {
-                minIdx = j;
-                simulationSteps.push({
-                    array: [...arr], compare: [minIdx], swap: [], sorted: [...sortedIndices], 
-                    msg: `Neues vorläufiges Minimum gefunden: ${arr[minIdx]}`
-                });
+        function answerBeginner(choice) {
+            if (practiceBlocked) return;
+            
+            const step = beginnerSteps[currentBeginnerIdx];
+            const feedbackEl = document.getElementById('practiceFeedback');
+            
+            if (choice === step.correctAnswer) {
+                feedbackEl.innerText = choice === 'ja' ? "✅ Spitze! Sie werden getauscht." : "✅ Ganz genau! Sie bleiben so liegen.";
+                feedbackEl.style.color = "green";
+                
+                if (choice === 'ja') {
+                    const container = document.getElementById('practiceContainer');
+                    step.indices.forEach(idx => {
+                        container.children[idx].className = 'kugel swap';
+                    });
+                }
+                
+                practiceBlocked = true;
+                setTimeout(() => {
+                    currentBeginnerIdx++;
+                    beginnerActivated = false;
+                    practiceBlocked = false;
+                    document.getElementById('beginnerButtons').style.display = 'none';
+                    if (currentBeginnerIdx < beginnerSteps.length) {
+                        document.getElementById('beginnerPrompt').innerText = "Tippe auf die nächsten beiden Kugeln, die untersucht werden!";
+                    }
+                    renderPractice();
+                }, 1200);
+            } else {
+                feedbackEl.innerText = "❌ Schade, das stimmt nicht! Überlege genau, welcher Wert kleiner/größer ist bzw. im Alphabet weiter vorne steht.";
+                feedbackEl.style.color = "red";
             }
         }
-        if (minIdx !== i) {
-            simulationSteps.push({
-                array: [...arr], compare: [], swap: [i, minIdx], sorted: [...sortedIndices], 
-                msg: `Durchlauf fertig. Tausche ${arr[i]} mit dem kleinsten gefundenen Wert ${arr[minIdx]}`
-            });
-            expectedSwaps.push({ val1: arr[i], val2: arr[minIdx] });
-
-            let temp = arr[i];
-            arr[i] = arr[minIdx];
-            arr[minIdx] = temp;
-
-            simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: "Erfolgreich getauscht." });
-        }
-        sortedIndices.push(i);
-        simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: `Position ${i+1} ist nun endgültig sortiert.` });
-    }
-    sortedIndices.push(n - 1);
-    simulationSteps.push({ array: [...arr], compare: [], swap: [], sorted: [...sortedIndices], msg: "Sortierung abgeschlossen!" });
-}
-
-
     </script>
 </body>
 </html>
